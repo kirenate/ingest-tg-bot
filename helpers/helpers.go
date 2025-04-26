@@ -37,3 +37,12 @@ func SendMeInfo(info string, bot *tgbotapi.BotAPI) {
 		log.Printf("You can't even get an error message.\n %s", err)
 	}
 }
+
+func PrintJSON(str string, obj any) {
+	updateJSON, err := json.MarshalIndent(obj, "", "    ")
+	if err != nil {
+		log.Printf("failed to marshal update: %v", err)
+	}
+
+	log.Println(str + string(updateJSON))
+}

@@ -1,13 +1,15 @@
 package main
 
 import (
-	"encoding/json"
 	"ingest_bot/app"
 	"ingest_bot/helpers"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+var followUpMsg *tgbotapi.Message
+var newUpd tgbotapi.Update
 
 func main() {
 
@@ -21,16 +23,9 @@ func main() {
 	u.Timeout = 60
 
 	upd := bot.GetUpdatesChan(u)
-	var followUpMsg *tgbotapi.Message
 
 	for update := range upd {
-		updateJSON, err := json.MarshalIndent(update, "", "    ")
-		if err != nil {
-			log.Printf("failed to marshal update: %v", err)
-			continue
-		}
-
-		log.Println(string(updateJSON))
+		helpers.PrintJSON("", update)
 
 		if update.Message == nil && update.CallbackQuery == nil {
 			log.Printf("update.Message and CallbackQuery is nil: %v", update.Message)
@@ -38,31 +33,39 @@ func main() {
 		}
 
 		res, err := app.CheckStringMatching(&update)
+		if err != nil {
+			log.Printf("String didn't match, %s", err)
+		}
 		msg := update.Message
 
 		if res == true {
-
 			err := app.CallIngestCmd(msg, bot) // forwarding request message
 			if err != nil {
 				log.Printf("Error calling CallIngestCmd: %s", err)
 				helpers.SendMeInfo(err.Error(), bot)
-				continue
 			}
 
 			followUpMsg, err = app.ConstructCallKeyboard(bot, &update) // sending additional message with keyboard
+
 			if err != nil {
 				log.Printf("Error calling ConstructCallKeyboard: %s", err)
 				helpers.SendMeInfo(err.Error(), bot)
-				continue
 			}
 
 		}
-
-		if update.CallbackData() != "" {
-			err = app.AnswerCallback(&update, bot, followUpMsg)
+		log.Println("before last step")
+		helpers.PrintJSON("my update.CallbackData() : ", update.CallbackData())
+		if update.CallbackQuery != nil {
+			newUpd.CallbackQuery = update.CallbackQuery
+		}
+		helpers.PrintJSON("my newUpd: ", newUpd)
+		if newUpd.CallbackData() != "" {
+			log.Println("inside last step")
+			err = app.AnswerCallback(&newUpd, bot, followUpMsg)
 			if err != nil {
 				continue
 			}
+			log.Println("after last step")
 		}
 	}
 }

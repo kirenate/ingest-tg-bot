@@ -49,42 +49,42 @@ func CheckStringMatching(update *tgbotapi.Update) (bool, error) {
 	return res, err
 }
 
-func GetCallbackQueryResponse(update *tgbotapi.Update, bot *tgbotapi.BotAPI) (*tgbotapi.APIResponse, error) {
+func GetCallbackQueryResponse(update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	if update.CallbackQuery == nil {
 		err := errors.New("update.CallbackQuery is nil")
-		return nil, err
+		return err
 	}
 	callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-	resp, err := bot.Request(callback)
-
+	_, err := bot.Request(callback)
+	//log.Printf("Callback msg response: %v", resp)
 	if err != nil {
 		log.Printf("Error while getting accepting callback data: %s", err)
 		helpers.SendMeInfo(err.Error(), bot)
-		return nil, err
+		return err
 	}
-	return resp, err
+	return err
 }
 
-func EditFollowUpMessage(followUpMsg *tgbotapi.Message, bot *tgbotapi.BotAPI) (*tgbotapi.Message, error) {
-	if followUpMsg == nil {
-		log.Panic("followUpMsg is nil")
+func EditFollowUpMessage(respChatID int64, respMessageID int, bot *tgbotapi.BotAPI) (*tgbotapi.Message, error) {
+	// if resp == nil {
+	// 	log.Panic("followUpMsg is nil")
 
-	}
-	if followUpMsg.Chat == nil {
-		log.Panic("followUpMsg.Chat is nil")
-	}
-	editedKeyboard := tgbotapi.NewEditMessageReplyMarkup(followUpMsg.Chat.ID, followUpMsg.MessageID, ConfirmKeyboard)
-	resp, err := bot.Send(editedKeyboard)
+	// }
+	// if resp.Chat == nil {
+	// 	log.Panic("followUpMsg.Chat is nil")
+	// }
+	editedKeyboard := tgbotapi.NewEditMessageReplyMarkup(respChatID, respMessageID, ConfirmKeyboard)
+	newResp, err := bot.Send(editedKeyboard)
 	if err != nil {
 		log.Printf("Error while sending editedKeyboard to telegram : %s", err)
 		return nil, err
 	}
 
-	return &resp, err
+	return &newResp, err
 }
 
-func SendMsgConfirmation(followUpMsg *tgbotapi.Message, bot *tgbotapi.BotAPI) (*tgbotapi.Message, error) {
-	msg_confirmed := tgbotapi.NewEditMessageText(followUpMsg.Chat.ID, followUpMsg.MessageID, "Проблема решена, спасибо!")
+func SendMsgConfirmation(respChatID int64, respMessageID int, bot *tgbotapi.BotAPI) (*tgbotapi.Message, error) {
+	msg_confirmed := tgbotapi.NewEditMessageText(respChatID, respMessageID, "Проблема решена, спасибо!")
 	new_msg, err := bot.Send(msg_confirmed)
 	if err != nil {
 		log.Printf("Error sending confirmation message: %s", err)
@@ -93,28 +93,41 @@ func SendMsgConfirmation(followUpMsg *tgbotapi.Message, bot *tgbotapi.BotAPI) (*
 	return &new_msg, err
 }
 
-func AnswerCallback(update *tgbotapi.Update, bot *tgbotapi.BotAPI, followUpMsg *tgbotapi.Message) error {
-	if update.CallbackQuery == nil {
+func AnswerCallback(newUpd *tgbotapi.Update, bot *tgbotapi.BotAPI, followUpMsg *tgbotapi.Message) error {
+	if newUpd.CallbackQuery == nil {
 		err := errors.New("update.CallbackQuery is nil")
 		return err
 	}
-	switch update.CallbackQuery.Data {
+	switch newUpd.CallbackQuery.Data {
 	case "request_accepted":
-		_, err := GetCallbackQueryResponse(update, bot) //send callback query to tgapi and get its response
+		err := GetCallbackQueryResponse(newUpd, bot) //send callback query to tgapi
+		//callback := update                              //передать месседж айди для сообщения которое нужно поменять через колбек
 		if err != nil {
 			log.Printf("Error calling GetCallbackQueryResponse: %s", err)
 		}
-		_, err = EditFollowUpMessage(followUpMsg, bot)
+		if newUpd == nil {
+			log.Panic("newUpd is nil")
+		}
+		if newUpd.CallbackQuery == nil {
+			log.Panic("newUpd.Message is nil")
+		}
+		_, err = EditFollowUpMessage(newUpd.CallbackQuery.Message.Chat.ID, newUpd.CallbackQuery.Message.MessageID, bot)
 
 		if err != nil {
 			log.Printf("Error calling EditFollowUpMessage: %s", err)
 		}
 	case "request_satisfied":
-		_, err := GetCallbackQueryResponse(update, bot)
+		err := GetCallbackQueryResponse(newUpd, bot)
 		if err != nil {
 			log.Printf("Error calling GetCallbackQueryResponse: %s", err)
 		}
-		new_msg, err := SendMsgConfirmation(followUpMsg, bot)
+		if newUpd == nil {
+			log.Panic("newUpd is nil")
+		}
+		if newUpd.CallbackQuery == nil {
+			log.Panic("newUpd.Message is nil")
+		}
+		new_msg, err := SendMsgConfirmation(newUpd.CallbackQuery.Message.Chat.ID, newUpd.CallbackQuery.Message.MessageID, bot)
 		if err != nil {
 			log.Printf("Error sending confirmation: %s", err)
 		}
