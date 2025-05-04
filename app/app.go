@@ -34,8 +34,8 @@ func ConstructCallKeyboard(bot *tgbotapi.BotAPI, update *tgbotapi.Update) (*tgbo
 
 }
 
-func CheckStringMatching(update *tgbotapi.Update) (bool, error) {
-	if update.Message == nil {
+func CheckStringMatching(msg *tgbotapi.Message) (bool, error) {
+	if msg == nil {
 		err := errors.New("update.Message is nil")
 		return false, err
 	}
@@ -44,7 +44,7 @@ func CheckStringMatching(update *tgbotapi.Update) (bool, error) {
 		log.Panicf("Regex could not be compiled!\n%s", err)
 		return false, err
 	}
-	res := r.MatchString(update.Message.Text)
+	res := r.MatchString(msg.Text)
 	log.Printf("String matching: %v", res)
 	return res, err
 }
@@ -59,7 +59,7 @@ func GetCallbackQueryResponse(update *tgbotapi.Update, bot *tgbotapi.BotAPI) err
 	//log.Printf("Callback msg response: %v", resp)
 	if err != nil {
 		log.Printf("Error while getting accepting callback data: %s", err)
-		helpers.SendMeInfo(err.Error(), bot)
+		//helpers.SendMeInfo(err.Error(), bot)
 		return err
 	}
 	return err

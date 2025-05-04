@@ -32,11 +32,11 @@ func main() {
 			continue
 		}
 
-		res, err := app.CheckStringMatching(&update)
+		msg := update.Message
+		res, err := app.CheckStringMatching(msg)
 		if err != nil {
 			log.Printf("String didn't match, %s", err)
 		}
-		msg := update.Message
 
 		if res == true {
 			err := app.CallIngestCmd(msg, bot) // forwarding request message
