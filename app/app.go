@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"ingest_bot/helpers"
 	"log"
 	"regexp"
@@ -11,18 +12,19 @@ import (
 
 func CallIngestCmd(request_msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
 
-	fwd_msg := tgbotapi.NewForward(helpers.Settings.IngestChatId, helpers.Settings.NozhiChatId, request_msg.MessageID)
+	fwd_msg := tgbotapi.NewForward(helpers.Settings.ToChatId, helpers.Settings.FromChatId, request_msg.MessageID)
 	//log.Println(fwd_msg)
 	_, err := bot.Send(fwd_msg)
 	if err != nil {
 		log.Printf("Request message could not be forwarded, error: %s", err)
-		return err
+		//helpers.SendMeInfo(err.Error(), bot)
+		SendRequestMsgCopy(request_msg, helpers.Settings.ToChatId, bot)
 	}
 	return err
 }
 
 func ConstructCallKeyboard(bot *tgbotapi.BotAPI, update *tgbotapi.Update) (*tgbotapi.Message, error) {
-	follow_up_msg := tgbotapi.NewMessage(helpers.Settings.IngestChatId, "Нас вызывают!")
+	follow_up_msg := tgbotapi.NewMessage(helpers.Settings.ToChatId, "Нас вызывают!")
 	follow_up_msg.ReplyMarkup = AcceptKeyboard
 	resp, err := bot.Send(follow_up_msg)
 	if err != nil {
@@ -39,7 +41,7 @@ func CheckStringMatching(msg *tgbotapi.Message) (bool, error) {
 		err := errors.New("update.Message is nil")
 		return false, err
 	}
-	r, err := regexp.Compile(`.*(?i)инжест.*`)
+	r, err := regexp.Compile(`.*(?i)прокс.*|.*(?i)инжест.*|.*(?i)proxy.*`)
 	if err != nil {
 		log.Panicf("Regex could not be compiled!\n%s", err)
 		return false, err
@@ -66,13 +68,6 @@ func GetCallbackQueryResponse(update *tgbotapi.Update, bot *tgbotapi.BotAPI) err
 }
 
 func EditFollowUpMessage(respChatID int64, respMessageID int, bot *tgbotapi.BotAPI) (*tgbotapi.Message, error) {
-	// if resp == nil {
-	// 	log.Panic("followUpMsg is nil")
-
-	// }
-	// if resp.Chat == nil {
-	// 	log.Panic("followUpMsg.Chat is nil")
-	// }
 	editedKeyboard := tgbotapi.NewEditMessageReplyMarkup(respChatID, respMessageID, ConfirmKeyboard)
 	newResp, err := bot.Send(editedKeyboard)
 	if err != nil {
@@ -83,14 +78,25 @@ func EditFollowUpMessage(respChatID int64, respMessageID int, bot *tgbotapi.BotA
 	return &newResp, err
 }
 
-func SendMsgConfirmation(respChatID int64, respMessageID int, bot *tgbotapi.BotAPI) (*tgbotapi.Message, error) {
-	msg_confirmed := tgbotapi.NewEditMessageText(respChatID, respMessageID, "Проблема решена, спасибо!")
+func SendMsgConfirmation(respChatID int64, respMessageID int, userId int64, bot *tgbotapi.BotAPI) (*tgbotapi.Message, error) {
+	customMessage := helpers.ChooseCustomMessage(userId)
+	msg_confirmed := tgbotapi.NewEditMessageText(respChatID, respMessageID, customMessage)
 	new_msg, err := bot.Send(msg_confirmed)
 	if err != nil {
 		log.Printf("Error sending confirmation message: %s", err)
 		return nil, err
 	}
 	return &new_msg, err
+}
+
+func SendRequestMsgCopy(requestMsg *tgbotapi.Message, ToChatId int64, bot *tgbotapi.BotAPI) {
+	requestCopy := fmt.Sprintf("@%s\n\n%s", requestMsg.From.UserName, requestMsg.Text)
+	msgCopy := tgbotapi.NewMessage(helpers.Settings.ToChatId, requestCopy)
+	_, err := bot.Send(msgCopy)
+	if err != nil {
+		helpers.SendMeInfo(err.Error(), bot)
+		log.Printf("Message could not be copied, %s", err)
+	}
 }
 
 func AnswerCallback(newUpd *tgbotapi.Update, bot *tgbotapi.BotAPI, followUpMsg *tgbotapi.Message) error {
@@ -127,7 +133,7 @@ func AnswerCallback(newUpd *tgbotapi.Update, bot *tgbotapi.BotAPI, followUpMsg *
 		if newUpd.CallbackQuery == nil {
 			log.Panic("newUpd.Message is nil")
 		}
-		new_msg, err := SendMsgConfirmation(newUpd.CallbackQuery.Message.Chat.ID, newUpd.CallbackQuery.Message.MessageID, bot)
+		new_msg, err := SendMsgConfirmation(newUpd.CallbackQuery.Message.Chat.ID, newUpd.CallbackQuery.Message.MessageID, newUpd.CallbackQuery.From.ID, bot)
 		if err != nil {
 			log.Printf("Error sending confirmation: %s", err)
 		}

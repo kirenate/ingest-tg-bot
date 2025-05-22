@@ -9,11 +9,34 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type User struct {
+	ID   int64  `json:"id"`
+	Msg  string `json:"msg"`
+	Name string `json:"name"`
+}
+
 type settings struct {
-	Token        string `json:"token"`
-	NozhiChatId  int64  `json:"nozhi_chat_id"`
-	IngestChatId int64  `json:"ingest_chat_id"`
-	EkirenId     int64  `json:"ekiren_id"`
+	Token      string `json:"token"`
+	FromChatId int64  `json:"from_chat_id"`
+	ToChatId   int64  `json:"to_chat_id"`
+	Users      []User `json:"users"`
+}
+
+func (r *settings) userIDToUser() map[int64]User {
+	users := make(map[int64]User)
+	for _, user := range r.Users {
+		users[user.ID] = user
+	}
+
+	return users
+}
+
+func (r *settings) userNameToID() map[string]int64 {
+	users := make(map[string]int64)
+	for _, user := range r.Users {
+		users[user.Name] = user.ID
+	}
+	return users
 }
 
 var Settings settings
@@ -27,14 +50,28 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	// err = json.Unmarshal(bytes, &Settings.Users)
+	// if err != nil {
+	// 	panic(err)
+	// }
+}
+
+func ChooseCustomMessage(fromUserId int64) string {
+	for userId, user := range Settings.userIDToUser() {
+		if userId == fromUserId {
+			return user.Msg
+		}
+	}
+	return "Проблема решена, спасибо!"
 }
 
 func SendMeInfo(info string, bot *tgbotapi.BotAPI) {
 	var text string = fmt.Sprintf("В боте что-то сломалось...\n %s", info)
-	msg := tgbotapi.NewMessage(Settings.EkirenId, text)
+	userNameToID := Settings.userNameToID()
+	msg := tgbotapi.NewMessage(userNameToID["Me"], text)
 	_, err := bot.Send(msg)
 	if err != nil {
-		log.Printf("You can't even get an error message.\n %s", err)
+		log.Printf("You can't get an error message.\n %s", err)
 	}
 }
 
