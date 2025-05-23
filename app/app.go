@@ -10,19 +10,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func CallIngestCmd(request_msg *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
-
-	fwd_msg := tgbotapi.NewForward(helpers.Settings.ToChatId, helpers.Settings.FromChatId, request_msg.MessageID)
-	//log.Println(fwd_msg)
-	_, err := bot.Send(fwd_msg)
-	if err != nil {
-		log.Printf("Request message could not be forwarded, error: %s", err)
-		//helpers.SendMeInfo(err.Error(), bot)
-		SendRequestMsgCopy(request_msg, helpers.Settings.ToChatId, bot)
-	}
-	return err
-}
-
 func ConstructCallKeyboard(bot *tgbotapi.BotAPI, update *tgbotapi.Update) (*tgbotapi.Message, error) {
 	follow_up_msg := tgbotapi.NewMessage(helpers.Settings.ToChatId, "Нас вызывают!")
 	follow_up_msg.ReplyMarkup = AcceptKeyboard

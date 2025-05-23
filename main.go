@@ -32,28 +32,24 @@ func main() {
 		}
 
 		msg := update.Message
-		var res bool
-		if msg.Chat.ID == helpers.Settings.FromChatId {
-			res, err = app.CheckStringMatching(msg)
-			if err != nil {
-				log.Printf("String didn't match, %s", err)
+		if msg != nil {
+			if msg.Chat.ID == helpers.Settings.FromChatId {
+				res, err := app.CheckStringMatching(msg)
+				if err != nil {
+					log.Printf("String didn't match, %s", err)
+				}
+
+				if res {
+					app.SendRequestMsgCopy(msg, helpers.Settings.ToChatId, bot) // forwarding request message
+
+					followUpMsg, err = app.ConstructCallKeyboard(bot, &update) // sending additional message with keyboard
+
+					if err != nil {
+						log.Printf("Error calling ConstructCallKeyboard: %s", err)
+						helpers.SendMeInfo(err.Error(), bot)
+					}
+				}
 			}
-		}
-
-		if res == true {
-			err := app.CallIngestCmd(msg, bot) // forwarding request message
-			if err != nil {
-				log.Printf("Error calling CallIngestCmd: %s", err)
-				helpers.SendMeInfo(err.Error(), bot)
-			}
-
-			followUpMsg, err = app.ConstructCallKeyboard(bot, &update) // sending additional message with keyboard
-
-			if err != nil {
-				log.Printf("Error calling ConstructCallKeyboard: %s", err)
-				helpers.SendMeInfo(err.Error(), bot)
-			}
-
 		}
 		log.Println("before last step")
 		helpers.PrintJSON("my update.CallbackData() : ", update.CallbackData())
