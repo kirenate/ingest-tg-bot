@@ -12,7 +12,6 @@ var followUpMsg *tgbotapi.Message
 var newUpd tgbotapi.Update
 
 func main() {
-
 	bot, err := tgbotapi.NewBotAPI(helpers.Settings.Token)
 	if err != nil {
 		panic(err)
@@ -33,9 +32,12 @@ func main() {
 		}
 
 		msg := update.Message
-		res, err := app.CheckStringMatching(msg)
-		if err != nil {
-			log.Printf("String didn't match, %s", err)
+		var res bool
+		if msg.Chat.ID == helpers.Settings.FromChatId {
+			res, err = app.CheckStringMatching(msg)
+			if err != nil {
+				log.Printf("String didn't match, %s", err)
+			}
 		}
 
 		if res == true {
