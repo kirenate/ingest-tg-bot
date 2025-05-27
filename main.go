@@ -28,6 +28,7 @@ func main() {
 	upd := bot.GetUpdatesChan(u)
 
 	for update := range upd {
+		log.Info().Interface("upd", upd).Msg("update.received")
 		//helpers.PrintJSON("", update)
 
 		if update.Message == nil && update.CallbackQuery == nil {
