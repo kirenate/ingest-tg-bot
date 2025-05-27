@@ -12,6 +12,7 @@ var followUpMsg *tgbotapi.Message
 var newUpd tgbotapi.Update
 
 func main() {
+
 	bot, err := tgbotapi.NewBotAPI(helpers.Settings.Token)
 	if err != nil {
 		panic(err)
@@ -51,6 +52,7 @@ func main() {
 				}
 			}
 		}
+
 		log.Println("before last step")
 		helpers.PrintJSON("my update.CallbackData() : ", update.CallbackData())
 		if update.CallbackQuery != nil {
