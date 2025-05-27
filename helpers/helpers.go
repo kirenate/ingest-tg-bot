@@ -3,8 +3,9 @@ package helpers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
+
+	"github.com/rs/zerolog/log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -31,7 +32,7 @@ func (r *settings) userIDToUser() map[int64]User {
 	return users
 }
 
-func (r *settings) userNameToID() map[string]int64 {
+func (r *settings) UserNameToID() map[string]int64 {
 	users := make(map[string]int64)
 	for _, user := range r.Users {
 		users[user.Name] = user.ID
@@ -67,19 +68,19 @@ func ChooseCustomMessage(fromUserId int64) string {
 
 func SendMeInfo(info string, bot *tgbotapi.BotAPI) {
 	var text string = fmt.Sprintf("В боте что-то сломалось...\n %s", info)
-	userNameToID := Settings.userNameToID()
+	userNameToID := Settings.UserNameToID()
 	msg := tgbotapi.NewMessage(userNameToID["Me"], text)
 	_, err := bot.Send(msg)
 	if err != nil {
-		log.Printf("You can't get an error message.\n %s", err)
+		log.Error().Stack().Err(err).Msg("can't send an error message")
 	}
 }
 
 func PrintJSON(str string, obj any) {
 	updateJSON, err := json.MarshalIndent(obj, "", "    ")
 	if err != nil {
-		log.Printf("failed to marshal update: %v", err)
+		log.Error().Stack().Err(err).Msg("failed to marshal update")
 	}
 
-	log.Println(str + string(updateJSON))
+	fmt.Println(str + string(updateJSON))
 }

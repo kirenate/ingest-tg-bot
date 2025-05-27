@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"ingest_bot/helpers"
-	"log"
 	"regexp"
+
+	"github.com/rs/zerolog/log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -15,10 +16,8 @@ func ConstructCallKeyboard(bot *tgbotapi.BotAPI, update *tgbotapi.Update) (*tgbo
 	follow_up_msg.ReplyMarkup = AcceptKeyboard
 	resp, err := bot.Send(follow_up_msg)
 	if err != nil {
-		log.Printf("'Send' could not be executed: %s", err)
+		log.Error().Stack().Err(err).Msg("'Send' could not be executed")
 	}
-
-	//log.Printf("my follow up message:\n%v", resp)
 	return &resp, err
 
 }
@@ -30,11 +29,11 @@ func CheckStringMatching(msg *tgbotapi.Message) (bool, error) {
 	}
 	r, err := regexp.Compile(`.*(?i)прокс.*|.*(?i)инжест.*|.*(?i)proxy.*`)
 	if err != nil {
-		log.Panicf("Regex could not be compiled!\n%s", err)
+		log.Panic().Msgf("Regex could not be compiled!\n%s", err)
 		return false, err
 	}
 	res := r.MatchString(msg.Text)
-	log.Printf("String matching: %v", res)
+	log.Info().Msgf("String matching: %v", res)
 	return res, err
 }
 
@@ -76,7 +75,7 @@ func SendMsgConfirmation(respChatID int64, respMessageID int, userId int64, bot 
 	return &new_msg, err
 }
 
-func SendRequestMsgCopy(requestMsg *tgbotapi.Message, ToChatId int64, bot *tgbotapi.BotAPI) {
+func SendRequestMsgCopy(requestMsg *tgbotapi.Message, ToChatId int64, bot *tgbotapi.BotAPI) string {
 	requestCopy := fmt.Sprintf("@%s\n\n%s", requestMsg.From.UserName, requestMsg.Text)
 	msgCopy := tgbotapi.NewMessage(helpers.Settings.ToChatId, requestCopy)
 	_, err := bot.Send(msgCopy)
@@ -84,6 +83,7 @@ func SendRequestMsgCopy(requestMsg *tgbotapi.Message, ToChatId int64, bot *tgbot
 		helpers.SendMeInfo(err.Error(), bot)
 		log.Printf("Message could not be copied, %s", err)
 	}
+	return requestCopy
 }
 
 func AnswerCallback(newUpd *tgbotapi.Update, bot *tgbotapi.BotAPI, followUpMsg *tgbotapi.Message) error {
@@ -93,40 +93,39 @@ func AnswerCallback(newUpd *tgbotapi.Update, bot *tgbotapi.BotAPI, followUpMsg *
 	}
 	switch newUpd.CallbackQuery.Data {
 	case "request_accepted":
-		err := GetCallbackQueryResponse(newUpd, bot) //send callback query to tgapi
-		//callback := update                              //передать месседж айди для сообщения которое нужно поменять через колбек
+		err := GetCallbackQueryResponse(newUpd, bot)
 		if err != nil {
-			log.Printf("Error calling GetCallbackQueryResponse: %s", err)
+			log.Error().Stack().Err(err).Msg("")
 		}
 		if newUpd == nil {
-			log.Panic("newUpd is nil")
+			log.Panic().Msg("newUpd is nil")
 		}
 		if newUpd.CallbackQuery == nil {
-			log.Panic("newUpd.Message is nil")
+			log.Panic().Msg("newUpd.Message is nil")
 		}
 		_, err = EditFollowUpMessage(newUpd.CallbackQuery.Message.Chat.ID, newUpd.CallbackQuery.Message.MessageID, bot)
 
 		if err != nil {
-			log.Printf("Error calling EditFollowUpMessage: %s", err)
+			log.Error().Stack().Err(err).Msg("error calling EditFollowUpMessage")
 		}
 	case "request_satisfied":
 		err := GetCallbackQueryResponse(newUpd, bot)
 		if err != nil {
-			log.Printf("Error calling GetCallbackQueryResponse: %s", err)
+			log.Error().Stack().Err(err).Msg("Error calling GetCallbackQueryResponse")
 		}
 		if newUpd == nil {
-			log.Panic("newUpd is nil")
+			log.Panic().Msg("newUpd is nil")
 		}
 		if newUpd.CallbackQuery == nil {
-			log.Panic("newUpd.Message is nil")
+			log.Panic().Msg("newUpd.Message is nil")
 		}
 		new_msg, err := SendMsgConfirmation(newUpd.CallbackQuery.Message.Chat.ID, newUpd.CallbackQuery.Message.MessageID, newUpd.CallbackQuery.From.ID, bot)
 		if err != nil {
-			log.Printf("Error sending confirmation: %s", err)
+			log.Error().Stack().Err(err).Msg("error sending confirmation")
 		}
-		log.Printf("telegram returned message: %v", new_msg)
+		log.Info().Interface("msg", new_msg).Msg("telegram returned message:")
 	default:
-		log.Printf("No valid callback data found")
+		log.Info().Msg("No valid callback data found")
 	}
 	return nil
 }

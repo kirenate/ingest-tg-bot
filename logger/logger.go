@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-func loggerSettings() {
+func MakeLogger() zerolog.Logger {
 	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.DateTime}
 	output.FormatLevel = func(i interface{}) string {
 		return strings.ToUpper(fmt.Sprintf("| %-4s |", i))
@@ -19,13 +20,20 @@ func loggerSettings() {
 		return time.Now().Local()
 	}
 	zerolog.ErrorStackMarshaler = printedMarshalStack
-	log := zerolog.New(output).With().Timestamp().Logger()
-	log = log.With().Caller().Logger()
-	log = log.With().Stack().Logger()
+	logger := zerolog.New(output).With().Timestamp().Logger()
+	logger = logger.With().Caller().Logger()
+	logger = logger.With().Stack().Logger()
+	log.Logger = logger
+
+	return logger
 }
 
 func printedMarshalStack(err error) any {
 	fmt.Printf("%+v\n", err)
 
 	return "up"
+}
+
+func init() {
+	log.Logger = MakeLogger()
 }

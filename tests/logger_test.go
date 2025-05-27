@@ -22,13 +22,13 @@ func TestLoggerConfig(t *te.T) {
 		return time.Now().Local()
 	}
 	zerolog.ErrorStackMarshaler = printedMarshalStack
-	log := zerolog.New(output).With().Timestamp().Logger()
-	log = log.With().Caller().Logger()
-	log = log.With().Stack().Logger()
+	logger := zerolog.New(output).With().Timestamp().Logger()
+	logger = logger.With().Caller().Logger()
+	logger = logger.With().Stack().Logger()
 
 	err := errors.New("error message")
-	log.Error().Stack().Err(err).Msg("")
-
+	logger.Error().Stack().Err(err).Msg("")
+	logger.Info().Msg("ok")
 	t.Fail()
 
 	// ////-----------------------------------
